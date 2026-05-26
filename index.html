@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sellco — Dashboard data &amp; API mapping</title>
+  <meta name="color-scheme" content="dark" />
   <style>
     :root {
       --bg: #0f1419;
@@ -15,28 +16,48 @@
       --ok: #3fb950;
     }
     * { box-sizing: border-box; }
+    html {
+      overflow-x: hidden;
+      overflow-x: clip;
+    }
     body {
       font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
       margin: 0;
-      padding: 1.25rem clamp(1rem, 4vw, 2.5rem) 3rem;
-      max-width: 1200px;
       margin-inline: auto;
+      max-width: 1200px;
+      padding-top: max(1.25rem, env(safe-area-inset-top, 0px));
+      padding-right: max(clamp(1rem, 4vw, 2.5rem), env(safe-area-inset-right, 0px));
+      padding-bottom: max(3rem, env(safe-area-inset-bottom, 0px));
+      padding-left: max(clamp(1rem, 4vw, 2.5rem), env(safe-area-inset-left, 0px));
     }
-    h1 { font-size: 1.65rem; font-weight: 600; margin-bottom: 0.35rem; }
-    .subtitle { color: var(--muted); font-size: 0.95rem; margin: 0 0 1.5rem; }
+    h1 {
+      font-size: clamp(1.2rem, 4vw + 0.5rem, 1.65rem);
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      line-height: 1.25;
+      padding-inline: 0;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(0.875rem, 2.8vw, 0.95rem);
+      margin: 0 0 1.5rem;
+      line-height: 1.45;
+    }
     .banner {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 1rem 1.15rem;
       margin-bottom: 1.5rem;
-      font-size: 0.9rem;
+      font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+      line-height: 1.5;
+      overflow-wrap: anywhere;
     }
     .banner strong { color: var(--ok); }
-    .banner code { background: rgba(88,166,255,0.15); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.85em; }
+    .banner code { background: rgba(88,166,255,0.15); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.85em; word-break: break-all; }
     details.dashboard {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -46,37 +67,107 @@
     }
     details.dashboard > summary {
       cursor: pointer;
-      padding: 0.85rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.25rem 0.5rem;
+      padding: 0.9rem clamp(0.75rem, 3vw, 1rem);
+      padding-block: max(0.85rem, 12px);
+      min-height: 44px;
       font-weight: 600;
-      font-size: 1.05rem;
+      font-size: clamp(0.98rem, 2.8vw, 1.05rem);
       list-style: none;
       border-bottom: 1px solid transparent;
+      -webkit-tap-highlight-color: rgba(88,166,255,0.25);
+      touch-action: manipulation;
+      user-select: none;
     }
     details.dashboard[open] > summary {
       border-bottom-color: var(--border);
       background: rgba(88,166,255,0.08);
     }
     details.dashboard > summary::-webkit-details-marker { display: none; }
-    .dash-route { color: var(--accent); font-weight: 400; font-size: 0.88rem; margin-left: 0.35rem; }
-    .dash-body { padding: 1rem 1rem 1.15rem; }
+    .dash-route {
+      color: var(--accent);
+      font-weight: 400;
+      font-size: clamp(0.76rem, 2.6vw, 0.88rem);
+      word-break: break-all;
+      flex-basis: 100%;
+      margin-left: 0;
+      margin-top: 0.05rem;
+    }
+    /* Wider screens: route sits inline next to title */
+    @media (min-width: 560px) {
+      .dash-route {
+        flex-basis: auto;
+        margin-left: 0.35rem;
+        margin-top: 0;
+        word-break: normal;
+      }
+    }
+    .dash-body {
+      padding: clamp(0.65rem, 3vw, 1rem) clamp(0.65rem, 3vw, 1rem) 1.1rem;
+      /* Wide tables scroll inside the panel (mobile) */
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      scrollbar-gutter: stable;
+    }
+    .dash-body > p:first-child { margin-top: 0; }
     table.ref {
       width: 100%;
+      min-width: 34rem;
       border-collapse: collapse;
-      font-size: 0.82rem;
+      font-size: clamp(0.72rem, 2.4vw, 0.82rem);
     }
     table.ref th, table.ref td {
       border: 1px solid var(--border);
-      padding: 0.5rem 0.65rem;
+      padding: 0.5rem 0.6rem;
       vertical-align: top;
       text-align: left;
     }
-    table.ref th { background: rgba(255,255,255,0.04); font-weight: 600; white-space: nowrap; }
-    table.ref td { word-break: break-word; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; color: #79c0ff; }
-    .muted { color: var(--muted); font-size: 0.82rem; }
-    h2.mini { font-size: 1rem; margin: 1rem 0 0.5rem; color: #c9d1d9; font-weight: 600; }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+    table.ref th {
+      background: rgba(255,255,255,0.04);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    table.ref td { word-break: break-word; overflow-wrap: anywhere; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: max(0.72rem, 0.92em);
+      color: #79c0ff;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: clamp(0.78rem, 2.5vw, 0.82rem);
+      overflow-wrap: anywhere;
+    }
+    h2.mini { font-size: clamp(0.92rem, 2.8vw, 1rem); margin: 1rem 0 0.5rem; color: #c9d1d9; font-weight: 600; }
+    footer {
+      margin-top: 2rem;
+      font-size: clamp(0.75rem, 2.4vw, 0.8rem);
+      color: var(--muted);
+      overflow-wrap: anywhere;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
     a { color: var(--accent); }
+    ul.muted {
+      padding-left: clamp(1rem, 4vw, 1.35rem);
+      margin: 0.5rem 0 0;
+    }
+    ul.muted li { margin-bottom: 0.35rem; }
+    @media (max-width: 559px) {
+      table.ref th { white-space: normal; vertical-align: bottom; hyphens: auto; min-width: 4.75rem; }
+      table.ref {
+        /* Nudge past viewport so cramped columns aren’t squeezed; panel scrolls horizontally */
+        min-width: min(125vw, 42rem);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      details.dashboard > summary { -webkit-tap-highlight-color: transparent; }
+    }
   </style>
 </head>
 <body>
