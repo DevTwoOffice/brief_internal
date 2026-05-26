@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellco — Dashboard data &amp; API mapping</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --ok: #3fb950;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      margin: 0;
+      padding: 1.25rem clamp(1rem, 4vw, 2.5rem) 3rem;
+      max-width: 1200px;
+      margin-inline: auto;
+    }
+    h1 { font-size: 1.65rem; font-weight: 600; margin-bottom: 0.35rem; }
+    .subtitle { color: var(--muted); font-size: 0.95rem; margin: 0 0 1.5rem; }
+    .banner {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.15rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .banner strong { color: var(--ok); }
+    .banner code { background: rgba(88,166,255,0.15); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.85em; }
+    details.dashboard {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+    details.dashboard > summary {
+      cursor: pointer;
+      padding: 0.85rem 1rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      list-style: none;
+      border-bottom: 1px solid transparent;
+    }
+    details.dashboard[open] > summary {
+      border-bottom-color: var(--border);
+      background: rgba(88,166,255,0.08);
+    }
+    details.dashboard > summary::-webkit-details-marker { display: none; }
+    .dash-route { color: var(--accent); font-weight: 400; font-size: 0.88rem; margin-left: 0.35rem; }
+    .dash-body { padding: 1rem 1rem 1.15rem; }
+    table.ref {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    table.ref th, table.ref td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.ref th { background: rgba(255,255,255,0.04); font-weight: 600; white-space: nowrap; }
+    table.ref td { word-break: break-word; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; color: #79c0ff; }
+    .muted { color: var(--muted); font-size: 0.82rem; }
+    h2.mini { font-size: 1rem; margin: 1rem 0 0.5rem; color: #c9d1d9; font-weight: 600; }
+    footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>Sellco dashboard — data, APIs &amp; queries</h1>
+  <p class="subtitle">Generated from <span class="mono">app-web</span> routes + <span class="mono">app-backend</span> controllers and SQL under <span class="mono">src/api/**/queries</span>.</p>
+
+  <div class="banner">
+    <strong>How to read “Amazon query” here.</strong> The browser calls Sellco REST APIs. Those handlers run
+    <strong>BigQuery SQL</strong> (files like <code>metrics-new.sql</code>), not the Amazon Advertising API directly at request time.
+    Rows come from datasets that Sellco fills from <strong>Amazon Ads reports</strong>, <strong>Amazon Marketing Stream</strong> (dataset often
+    <code>amazon_marketing_stream</code>), and <strong>Selling Partner</strong>-style vendor/seller feeds (dataset <code>sellcoai.sellco_amazon_sellor_vendor</code>).
+    Postgres is used for accounts, subscriptions, ASIN catalogue rows, AMC metadata, etc.
+  </div>
+
+  <details class="dashboard" open>
+    <summary>Insight 360 <span class="dash-route">/dashboard/insight-360</span></summary>
+    <div class="dash-body">
+      <p class="muted">Aggregated ad metrics and dimension tables vs compare period. Backend: <span class="mono">POST /insights/&lt;path&gt;</span> → BigQuery (<span class="mono">InsightService</span>).</p>
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>SQL file (backend)</th><th>Primary BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>Metric cards</td><td>Spend, revenue, clicks, ROAS, etc. by campaign type</td><td class="mono">POST /insights/metrics</td><td class="mono">insight/queries/metrics-new.sql</td><td><span class="mono">sponsoredProducts_keywords</span>, <span class="mono">sponsoredProducts_targets</span>, <span class="mono">sponsoredBrands_*</span>, <span class="mono">sponsoredDisplay_targets</span> (dataset <span class="mono">sellcoai.sellco_amazon_ads</span>)</td></tr>
+          <tr><td>Campaign types table</td><td>Metrics by SP / SB / SD</td><td class="mono">POST /insights/campaign-types</td><td class="mono">campaign-types-new.sql</td><td>Same family + <span class="mono">sponsored*_campaigns</span></td></tr>
+          <tr><td>Targeting types</td><td>Metrics by targeting type</td><td class="mono">POST /insights/targeting-types</td><td class="mono">targeting-types.sql</td><td><span class="mono">*_keywords</span>, <span class="mono">*_targets</span></td></tr>
+          <tr><td>Campaign names</td><td>Per-campaign performance + budgets</td><td class="mono">POST /insights/campaign-names</td><td class="mono">campaign-names-new-v2.sql</td><td>Campaign-level sources in SP/SB/SD reporting tables</td></tr>
+          <tr><td>Targeting strings</td><td>Targeting text &amp; KPIs</td><td class="mono">POST /insights/targeting</td><td class="mono">targeting.sql</td><td><span class="mono">*_keywords</span>, <span class="mono">*_targets</span>, <span class="mono">sponsoredDisplay_targets</span></td></tr>
+          <tr><td>Keywords match types</td><td>Performance by match type</td><td class="mono">POST /insights/keywords-match-types</td><td class="mono">keywords-match-types.sql</td><td>Keyword/target tables</td></tr>
+          <tr><td>Search terms</td><td>Search term report metrics</td><td class="mono">POST /insights/search-terms</td><td class="mono">search-terms.sql</td><td><span class="mono">sponsoredProducts_searchTerms</span>, <span class="mono">sponsoredBrands_searchTerms</span></td></tr>
+          <tr><td>Placement</td><td>Placement breakdown</td><td class="mono">POST /insights/placement-type</td><td class="mono">placement-type.sql</td><td><span class="mono">sponsoredBrands_campaigns_placement</span>, <span class="mono">sponsoredProducts_campaigns_placement</span></td></tr>
+          <tr><td>Advertising ASIN</td><td>ASIN advertised</td><td class="mono">POST /insights/advertising-asin</td><td class="mono">advertising-asin.sql</td><td>Product / performance joins</td></tr>
+          <tr><td>ASIN / Brand / taxonomy</td><td>Catalog-derived dimensions</td><td class="mono">POST /insights/asin … /sku</td><td class="mono">asin.sql, brand.sql, category.sql …</td><td><span class="mono">combined_ad_performance_with_metadata</span> (+ related)</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Charts / daily metrics (if enabled): <span class="mono">POST /insights/daily-metrics</span> → <span class="mono">dailymetrics.sql</span>.</p>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Growth Tracking <span class="dash-route">/dashboard/growth-tracking</span></summary>
+    <div class="dash-body">
+      <p class="muted">Uses <strong>Amazon Marketing Stream</strong> conversion/traffic datasets in BigQuery. <span class="mono">POST /growth-tracking/&lt;path&gt;</span>.</p>
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>SQL file</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>Summary metrics</td><td>MSP stream KPIs vs compare</td><td class="mono">POST /growth-tracking/metrics</td><td class="mono">growth-tracking/queries/metrics.sql</td><td><span class="mono">amazon_marketing_stream.sp_conversion</span>, <span class="mono">sp_traffic</span>, <span class="mono">sb_conversion</span>, <span class="mono">sb_traffic</span>, <span class="mono">sd_conversion</span>, <span class="mono">sd_traffic</span></td></tr>
+          <tr><td>By hour</td><td>Hour-of-day performance</td><td class="mono">POST /growth-tracking/hours</td><td class="mono">hours.sql</td><td>Same MS stream tables</td></tr>
+          <tr><td>Campaign types, targeting, placements, names, match types</td><td>Stream-based breakdowns</td><td class="mono">POST /growth-tracking/campaign-types … /placement-type</td><td class="mono">campaign-types.sql, targeting.sql, …</td><td>Same MS stream tables</td></tr>
+          <tr><td>ASIN names (API exists)</td><td>ASIN-level from stream</td><td class="mono">POST /growth-tracking/asins-names</td><td class="mono">Asins-names.sql</td><td><span class="mono">sellcoai.amazon_marketing_stream.*</span> (project-qualified stream tables)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Snapsuite <span class="dash-route">/dashboard/snap-suite</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>SQL / source</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>Product report (total / ad / organic)</td><td>ASIN revenue split, BSR, etc.</td><td class="mono">POST /snapshot/product-report/total|ad|organic</td><td class="mono">product_report_*.sql</td><td><span class="mono">amazon_sales_and_traffic</span>, <span class="mono">amazon_vendor_sales</span>, <span class="mono">amazon_merchant_listings</span>, <span class="mono">sellco_data.asins</span>, <span class="mono">sponsoredProducts_productAds</span>, <span class="mono">sponsoredDisplay_productAds</span></td></tr>
+          <tr><td>Search list</td><td>Union of ASINs across sources</td><td class="mono">POST /snapshot/product-report/search-list</td><td class="mono">product_report_search_list.sql</td><td>Same seller/vendor + ads product ads tables</td></tr>
+          <tr><td>Metric charts</td><td>Revenue / order / traffic / AOV / CR / ROAS trend blocks</td><td class="mono">POST /snapshot/get-*-metrics</td><td class="mono">metrics.sql, combined.sql</td><td>Aligned snapshot query pack under <span class="mono">snapshot/queries/</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Campaign Central <span class="dash-route">/dashboard/campaign-central</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>SQL file</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>India map / region list</td><td>Geo sales split</td><td class="mono">POST /campaign-central/get-region-list</td><td class="mono">region-list-new.sql</td><td>Seller/vendor sales &amp; traffic (see queries folder)</td></tr>
+          <tr><td>Brand revenue</td><td>Brand × revenue KPIs</td><td class="mono">POST /campaign-central/get-brand-revenue-data</td><td class="mono">brand-revenue.sql</td><td><span class="mono">amazon_sales_and_traffic</span>, <span class="mono">amazon_vendor_sales</span>, <span class="mono">amazon_vendor_traffic</span>, <span class="mono">*_productAds</span></td></tr>
+          <tr><td>Dropdowns &amp; product report helpers</td><td>Brand, category, SKU, …</td><td class="mono">POST /campaign-central/brand … /product-title</td><td class="mono">brand.sql, category.sql, …</td><td>Master-overview query pack</td></tr>
+          <tr><td>Metrics / ad / inventory series</td><td>Time series tiles</td><td class="mono">POST /campaign-central/metrics|ad-metrics|inventory-metrics</td><td class="mono">queries/metrics/*.sql</td><td>See respective SQL files</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Dayparting <span class="dash-route">/dashboard/day-parting</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>SQL / datastore</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Metrics, chart, heatmap</td><td>Stream-based day-of-week × hour patterns</td><td class="mono">POST /day-parting/metrics, POST /day-parting/chart, POST /day-parting/heatmap-new</td><td class="mono">day-parting/queries/metrics-new.sql, chart.sql, heatmap-new.sql</td><td>BigQuery: <span class="mono">amazon_marketing_stream.*</span></td></tr>
+          <tr><td>Campaign/targeting dropdowns</td><td>Filter hierarchies</td><td class="mono">POST /day-parting/campaign-types …</td><td class="mono">queries/dropdown/*.sql</td><td>Stream + derived CTEs</td></tr>
+          <tr><td>Automation dayparting rules</td><td>Rule CRUD, bootstrap</td><td class="mono">GET/POST /ads/automation/dayparting/…</td><td>—</td><td>Application DB (rule persistence) + optional BQ reads (see services)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Sellco AI <span class="dash-route">/dashboard/sellco-ai</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Section</th><th>Data shown</th><th>API</th><th>Backend / tables</th></tr></thead>
+        <tbody>
+          <tr><td>Chat threads</td><td>Conversations &amp; messages</td><td class="mono">GET/POST/PUT/DELETE /ai/conversations…</td><td>AI service + LLM; conversation storage (see <span class="mono">ai</span> module entities)</td></tr>
+          <tr><td>Streaming reply</td><td>Token stream</td><td class="mono">POST /ai/chat/stream</td><td>May call tools that hit BigQuery (e.g. insight / campaign-central tools)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Ads — Overview <span class="dash-route">/dashboard/ads/overview</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Section</th><th>API</th><th>SQL / source</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>Metrics / bar / line</td><td class="mono">POST /ads-overview/metrics|bar-chart|line-chart</td><td class="mono">automation-rules/Overview/queries/metrics-v2.sql, barchart-v2.sql, linegraph-v2.sql</td><td><span class="mono">sellcoai.sellco_amazon_ads</span> keyword/target tables (same pattern as Insight metrics)</td></tr>
+          <tr><td>Funnel &amp; campaign/targeting type</td><td class="mono">POST /ads-overview/funnel …</td><td class="mono">ads/overview/funnel/queries/*.sql</td><td>SP/SB/SD keyword &amp; target tables</td></tr>
+          <tr><td>Performance tables</td><td class="mono">POST /ads-overview/campaign-performance …</td><td class="mono">ads/overview/performance/queries/*.sql</td><td>Search / product performance from ads dataset</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Demo accounts may return static JSON (no BQ) for some overview endpoints.</p>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Ads — Insights <span class="dash-route">/dashboard/ads/adsdata</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Feature</th><th>API</th><th>SQL file</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td>Main tables</td><td class="mono">POST /ads-insights/table</td><td class="mono">ads-insights-table.sql</td><td><span class="mono">sponsoredProducts_campaign_list</span>, <span class="mono">sponsoredProducts_keywords</span>, <span class="mono">sponsoredProducts_searchTerms</span></td></tr>
+          <tr><td>Visibility / bid automation</td><td class="mono">POST /ads-insights/visibility-table</td><td class="mono">ads-visibility-table.sql</td><td>Same core SP tables</td></tr>
+          <tr><td>ASIN table</td><td class="mono">POST /ads-insights/asin-table</td><td class="mono">ads-insights-asin-table.sql</td><td>Same</td></tr>
+          <tr><td>Mark negative / update bid</td><td class="mono">POST/PATCH …/mark-negative, update-bid</td><td class="mono">mark-negative.sql, update-keywordId-bid.sql</td><td>Updates <span class="mono">sponsoredProducts_searchTerms</span></td></tr>
+          <tr><td>Scale (auto → manual, targets)</td><td class="mono">POST …/scale-auto-manual-table, target-improvements-table</td><td class="mono">auto-campaign-table.sql, target-improvements-table.sql</td><td><span class="mono">sponsoredProducts_searchTerms</span> (+ joins)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Ads — Targets &amp; search terms <span class="dash-route">/dashboard/ads/targets-and-search-terms</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>Endpoint</th><th>SQL file</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">POST /target-search-term/table</td><td class="mono">target-search-term.sql</td><td><span class="mono">sponsoredProducts_searchTerms</span>, <span class="mono">campaigns</span>, <span class="mono">adGroups</span></td></tr>
+          <tr><td class="mono">POST …/keywords</td><td class="mono">keywords.sql</td><td><span class="mono">sponsoredProducts_keywords</span></td></tr>
+          <tr><td class="mono">POST …/asin-targets</td><td class="mono">asin-targets.sql</td><td><span class="mono">sponsoredProducts_targets</span></td></tr>
+          <tr><td class="mono">POST …/placements</td><td class="mono">placements.sql</td><td><span class="mono">sponsoredProducts_campaigns_placement</span>, <span class="mono">sponsoredProducts_campaign_list</span></td></tr>
+          <tr><td class="mono">POST …/product-analysis</td><td class="mono">product-analysis.sql</td><td><span class="mono">sponsoredProducts_productAds</span></td></tr>
+          <tr><td class="mono">POST …/visual-data</td><td class="mono">targetSearchVisualData.sql</td><td><span class="mono">sponsoredProducts_searchTerms</span></td></tr>
+        </tbody>
+      </table>
+      <p class="muted">All tables above live under dataset <span class="mono">sellcoai.sellco_amazon_ads</span> unless noted.</p>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Ads — Stream <span class="dash-route">/dashboard/ads/stream</span></summary>
+    <div class="dash-body">
+      <table class="ref">
+        <thead><tr><th>API</th><th>SQL</th><th>BigQuery tables</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">POST /stream/heatmap</td><td class="mono">Stream/queries/steam-heat-map.sql</td><td><span class="mono">amazon_marketing_stream.sb_conversion|sb_traffic|sd_*|sp_*</span></td></tr>
+          <tr><td class="mono">POST /stream/metrics</td><td class="mono">Stream/queries/metrics.sql</td><td>Same MS stream tables</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Accounts, AMC, DSP, ASIN, billing</summary>
+    <div class="dash-body">
+      <h2 class="mini">Accounts &amp; profiles</h2>
+      <table class="ref">
+        <tbody>
+          <tr><th style="width:22%">Area</th><td><span class="mono">GET/POST/PATCH /accounts*</span></td></tr>
+          <tr><th>Datastore</th><td>PostgreSQL — e.g. table <span class="mono">accounts</span>, <span class="mono">accounts_members</span> (TypeORM entities). Not BigQuery.</td></tr>
+        </tbody>
+      </table>
+      <h2 class="mini">AMC</h2>
+      <table class="ref">
+        <tbody>
+          <tr><th style="width:22%">API</th><td><span class="mono">/amc/audience-instances</span>, <span class="mono">/amc/audiences</span></td></tr>
+          <tr><th>Datastore</th><td>PostgreSQL / service layer (see <span class="mono">api/amc</span>) — not the Marketing Stream BQ tables.</td></tr>
+        </tbody>
+      </table>
+      <h2 class="mini">DSP audience tool</h2>
+      <table class="ref">
+        <tbody>
+          <tr><th style="width:22%">API</th><td class="mono">POST /dsp/audience</td></tr>
+          <tr><th>Datastore</th><td>Backend handler (check <span class="mono">dsp</span> module) — extend this row when wired to BQ/API.</td></tr>
+        </tbody>
+      </table>
+      <h2 class="mini">ASIN categorization</h2>
+      <table class="ref">
+        <tbody>
+          <tr><th style="width:22%">API</th><td class="mono">GET/POST /asin/*</td></tr>
+          <tr><th>Datastore</th><td>PostgreSQL ASIN/catalogue tables via <span class="mono">asin</span> module.</td></tr>
+        </tbody>
+      </table>
+      <h2 class="mini">Subscriptions &amp; billing</h2>
+      <table class="ref">
+        <tbody>
+          <tr><th style="width:22%">API</th><td><span class="mono">/subscriptions*</span>, <span class="mono">/payment/*</span>, <span class="mono">/plans/active</span></td></tr>
+          <tr><th>Datastore</th><td>PostgreSQL (subscriptions, invoices) + Razorpay HTTP — not Amazon.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="dashboard">
+    <summary>Mock / static UI (no live Amazon/BQ)</summary>
+    <div class="dash-body">
+      <ul class="muted">
+        <li><strong>Blacklist keywords</strong> — local mock data file.</li>
+        <li><strong>Ads → Marketing Cloud path-to-conversion</strong> — static demo data in frontend.</li>
+        <li><strong>Some Ads overview responses</strong> — static when <span class="mono">AccountType.DEMO</span>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <footer>
+    Open this file in a browser from the repo: <span class="mono">app-web/docs/dashboard-api-reference.html</span>.
+    For deeper SQL, open the referenced <span class="mono">.sql</span> files under <span class="mono">app-backend/src/api/</span>.
+  </footer>
+</body>
+</html>
